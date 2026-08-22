@@ -35,6 +35,6 @@ export default () => {
     try { new URL(url); } catch (error) { message(texts.invalid); return; }
     if (state.feeds.some((feed) => feed.url === url)) { message(texts.exists); return; }
     button.disabled = true; input.disabled = true;
-    axios.get(createLink(url)).then((response) => { const payload = typeof response.data === 'string' ? JSON.parse(response.data) : response.data; const parsed = parse(payload.contents); state.feeds.push({ ...parsed.feed, url }); state.posts.push(...parsed.posts.map((post, index) => ({ ...post, id: `${Date.now()}-${index}` }))); draw(); form.reset(); message(texts.success, 'success'); }).catch((error) => { message(error.message === 'invalidRSS' ? texts.rss : texts.network); }).finally(() => { button.disabled = false; input.disabled = false; });
+    axios.get(createLink(url)).then((response) => { const payload = typeof response.data === 'string' ? JSON.parse(response.data) : response.data; const parsed = parse(payload.contents); state.feeds.push({ ...parsed.feed, url }); state.posts.push(...parsed.posts.map((post, index) => ({ ...post, id: `${Date.now()}-${index}` }))); draw(); form.reset(); message(texts.success, 'success'); }).catch((error) => { console.error(error); message(error.message === 'invalidRSS' ? texts.rss : texts.network); }).finally(() => { button.disabled = false; input.disabled = false; });
   });
 };
