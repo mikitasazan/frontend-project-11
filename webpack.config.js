@@ -1,10 +1,7 @@
-const HtmlWebpackPlugin = require('html-webpack-plugin');
+import HtmlWebpackPlugin from 'html-webpack-plugin';
 
-module.exports = {
+export default {
   mode: process.env.NODE_ENV || 'development',
-  // experiments: {
-  //   asset: true,
-  // },
   module: {
     rules: [
       {
@@ -12,41 +9,36 @@ module.exports = {
         exclude: /node_modules/,
         use: {
           loader: 'babel-loader',
+          options: {
+            presets: ['@babel/preset-env'],
+          },
         },
       },
+      { test: /\.css$/, use: ['style-loader', 'css-loader', 'postcss-loader'] },
       {
-        test: /\.html$/,
-        loader: 'html-loader',
+        test: /\.scss$/,
+        use: ['style-loader', 'css-loader', 'sass-loader', 'postcss-loader'],
       },
       {
-        test: /\.css$/,
-        use: ['style-loader', 'css-loader'],
+        test: /\.woff2?(\?v=[0-9]\.[0-9]\.[0-9])?$/,
+        use: 'url-loader?limit=10000',
       },
       {
-        test: /\.(jpe?g|png|gif|svg|ico)$/i,
-        use: [
-          {
-            loader: 'file-loader',
-            options: {
-              name: '[name].[ext]',
-              outputPath: 'images/',
-            },
-          },
-        ],
+        test: /\.(ttf|eot|svg)(\?[\s\S]+)?$/,
+        use: 'file-loader',
       },
-      // {
-      //   test: /\.svg$/,
-      //   type: 'asset',
-      //   use: 'file-loader',
-      // },
     ],
   },
   plugins: [
     new HtmlWebpackPlugin({
-      template: 'template.html',
+      template: 'index.html',
     }),
   ],
+  output: {
+    clean: true,
+  },
   devServer: {
-    contentBase: './dist',
+    hot: true,
+    open: true,
   },
 };

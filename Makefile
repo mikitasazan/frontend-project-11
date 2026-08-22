@@ -1,20 +1,12 @@
-dev:
-	npx webpack-dev-server
+develop:
+	npx webpack serve
 
-install:
-	npm install
+install: 
+	npm ci
 
 build:
-	NODE_OPTIONS=--openssl-legacy-provider NODE_ENV=production npx webpack
+	rm -rf dist
+	NODE_ENV=production npx webpack
 
-lint:
+lint: 
 	npx eslint .
-
-fix:
-	eslint . --fix
-
-webpack:
-	npx webpack
-
-deploy:
-	vercel
