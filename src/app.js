@@ -24,12 +24,12 @@ export default () => {
       const item = document.createElement('li'); const link = document.createElement('a'); const preview = document.createElement('button');
       link.href = post.url; link.target = '_blank'; link.textContent = post.title; link.dataset.seen = state.seen.has(post.id) ? 'true' : 'false';
       preview.type = 'button'; preview.textContent = 'Просмотр';
-      preview.addEventListener('click', () => { state.seen.add(post.id); link.dataset.seen = 'true'; modal.querySelector('.modal-title').textContent = post.title; modal.querySelector('[data-test="modal-body"]').textContent = post.description; modal.querySelector('.full-article').href = post.url; modal.classList.add('show'); modal.style.display = 'block'; });
+      preview.addEventListener('click', () => { state.seen.add(post.id); link.dataset.seen = 'true'; modal.querySelector('.modal-title').textContent = post.title; modal.querySelector('[data-test="modal-body"]').textContent = post.description; modal.querySelector('.full-article').href = post.url; modal.classList.add('show'); modal.style.display = 'block'; modal.setAttribute('aria-hidden', 'false'); });
       item.append(link, preview); postList.append(item);
     });
     feeds.append(feedList); posts.append(postList);
   };
-  modal.querySelectorAll('[data-bs-dismiss="modal"]').forEach((close) => close.addEventListener('click', () => { modal.classList.remove('show'); modal.style.display = 'none'; }));
+  modal.querySelectorAll('[data-bs-dismiss="modal"]').forEach((close) => close.addEventListener('click', () => { modal.classList.remove('show'); modal.style.display = 'none'; modal.setAttribute('aria-hidden', 'true'); }));
   form.addEventListener('submit', (event) => {
     event.preventDefault(); const url = input.value.trim();
     try { new URL(url); } catch (error) { message(texts.invalid); return; }
