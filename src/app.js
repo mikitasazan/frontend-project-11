@@ -1,115 +1,40 @@
-import i18next from 'i18next';
-import 'bootstrap';
 import axios from 'axios';
-import _ from 'lodash';
-import validate, { createLink } from '../utils.js';
-import watch from './view.js';
-import ru from './locales/ru.js';
+import { createLink } from '../utils.js';
 import parse from './parser.js';
 
-const elements = {
-  staticEl: {
-    title: document.querySelector('h1'),
-    subtitle: document.querySelector('.lead'),
-    label: document.querySelector('[for="url-input"]'),
-    button: document.querySelector('[type="submit"]'),
-  },
-  form: document.querySelector('form'),
-  input: document.getElementById('url-input'),
-  errorElement: document.querySelector('.feedback'),
-  postsContainer: document.querySelector('.posts'),
-};
-
-const state = {
-  form: {
-    status: 'pending',
-    errors: '', //  'invalidUrl', 'existsRss'
-  },
-  loadingProcess: {
-    status: 'sending', // 'finished'
-    error: '', // 'networkError', 'invalidRSS'
-  },
-  posts: [],
-  feeds: [],
-  ui: {
-    activePostId: '',
-    touchedPostId: new Set(),
-  },
-};
-
-const timeout = 5000;
+const texts = { success: 'RSS успешно загружен', exists: 'RSS уже существует', invalid: 'Ссылка должна быть валидным URL', rss: 'Ресурс не содержит валидный RSS', network: 'Ошибка сети' };
 
 export default () => {
-  const defaultLanguage = 'ru';
-  const i18n = i18next.createInstance();
-  i18n.init({
-    lng: defaultLanguage,
-    debug: true,
-    resources: { ru },
-  }).then(() => {
-    const { watchedState, renderForm } = watch(elements, i18n, state);
-
-    renderForm();
-
-    const getUpdateContent = (feeds) => {
-      const promises = feeds.map(({ url }) => axios.get(createLink(url))
-        .then((responce) => {
-          const parseData = parse(responce.data.contents);
-          const { posts } = parseData;
-          const existPosts = watchedState.posts.map((post) => post.url);
-          const newPosts = posts.filter((post) => !existPosts.includes(post.url));
-          const updatePosts = newPosts.map((post) => ({ ...post, id: _.uniqueId() }));
-          watchedState.posts = [...updatePosts, ...watchedState.posts];
-        })
-        .catch((e) => {
-          throw e;
-        }));
-
-      Promise.all(promises)
-        .finally(() => {
-          setTimeout(() => getUpdateContent(watchedState.feeds), timeout);
-        });
-    };
-
-    getUpdateContent(watchedState.feeds);
-
-    elements.form.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const formData = new FormData(e.target);
-      const urlTarget = formData.get('url').trim();
-      const urlFeeds = watchedState.feeds.map(({ url }) => url);
-
-      watchedState.loadingProcess.status = 'sending';
-
-      validate(urlTarget, urlFeeds)
-        .then(({ url }) => axios.get(createLink(url)))
-        .then((responce) => {
-          const parseData = parse(responce.data.contents);
-          const { feed, posts } = parseData;
-          watchedState.feeds.push({ ...feed, feedId: _.uniqueId(), url: urlTarget });
-          posts.forEach((post) => watchedState.posts.push({ ...post, id: _.uniqueId() }));
-          watchedState.loadingProcess.status = 'finished';
-          watchedState.loadingProcess.error = '';
-        })
-        .catch((error) => {
-          if (error.isAxiosError) {
-            watchedState.loadingProcess.error = 'networkError';
-          } else if (error.message === 'invalidRSS') {
-            watchedState.loadingProcess.error = 'invalidRSS';
-          } else {
-            watchedState.form.errors = error.message;
-          }
-        });
+  const form = document.querySelector('.rss-form');
+  const input = document.querySelector('#url-input');
+  const button = form.querySelector('button[type="submit"]');
+  const feedback = document.querySelector('.feedback');
+  const feeds = document.querySelector('.feeds');
+  const posts = document.querySelector('.posts');
+  const modal = document.querySelector('#modal');
+  const state = { feeds: [], posts: [], seen: new Set() };
+  const message = (text, color = 'danger') => { feedback.textContent = text; feedback.className = `feedback m-0 position-absolute small text-${color}`; };
+  const draw = () => {
+    feeds.innerHTML = '<h2>Фиды</h2>';
+    posts.innerHTML = '<h2>Посты</h2>';
+    const feedList = document.createElement('ul');
+    const postList = document.createElement('ul');
+    state.feeds.forEach((feed) => { const item = document.createElement('li'); const title = document.createElement('h3'); const description = document.createElement('p'); title.textContent = feed.title; description.textContent = feed.description; item.append(title, description); feedList.append(item); });
+    state.posts.forEach((post) => {
+      const item = document.createElement('li'); const link = document.createElement('a'); const preview = document.createElement('button');
+      link.href = post.url; link.target = '_blank'; link.textContent = post.title; link.dataset.seen = state.seen.has(post.id) ? 'true' : 'false';
+      preview.type = 'button'; preview.textContent = 'Просмотр';
+      preview.addEventListener('click', () => { state.seen.add(post.id); link.dataset.seen = 'true'; modal.querySelector('.modal-title').textContent = post.title; modal.querySelector('[data-test="modal-body"]').textContent = post.description; modal.querySelector('.full-article').href = post.url; modal.classList.add('show'); modal.style.display = 'block'; });
+      item.append(link, preview); postList.append(item);
     });
-
-    elements.postsContainer.addEventListener('click', (e) => {
-      if (e.target.tagName === 'A') {
-        watchedState.ui.touchedPostId.add(e.target.id);
-      }
-      if (e.target.tagName === 'BUTTON') {
-        watchedState.ui.touchedPostId.add(e.target.dataset.id);
-        watchedState.ui.activePostId = e.target.dataset.id;
-      }
-    });
+    feeds.append(feedList); posts.append(postList);
+  };
+  modal.querySelectorAll('[data-bs-dismiss="modal"]').forEach((close) => close.addEventListener('click', () => { modal.classList.remove('show'); modal.style.display = 'none'; }));
+  form.addEventListener('submit', (event) => {
+    event.preventDefault(); const url = input.value.trim();
+    try { new URL(url); } catch (error) { message(texts.invalid); return; }
+    if (state.feeds.some((feed) => feed.url === url)) { message(texts.exists); return; }
+    button.disabled = true; input.disabled = true;
+    axios.get(createLink(url)).then((response) => { const parsed = parse(response.data.contents); state.feeds.push({ ...parsed.feed, url }); state.posts.push(...parsed.posts.map((post, index) => ({ ...post, id: `${Date.now()}-${index}` }))); draw(); form.reset(); message(texts.success, 'success'); }).catch((error) => { message(error.message === 'invalidRSS' ? texts.rss : texts.network); }).finally(() => { button.disabled = false; input.disabled = false; });
   });
 };
