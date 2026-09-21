@@ -28,7 +28,9 @@ const renderChannels = (elm, state) => {
   const { feeds, news, activeFeedID } = state.data;
   const list = document.createElement('div');
   list.className = 'list-group';
-  feeds.forEach(({ id, title, description, link }) => {
+  feeds.forEach(({
+    id, title, description, link,
+  }) => {
     const a = document.createElement('a');
     const p = document.createElement('p');
     const div = document.createElement('div');

@@ -7,13 +7,12 @@ import parse from './parse';
 const PROXY_URL = 'https://cors-anywhere.herokuapp.com/';
 const makeProxyBasedURL = (url) => `${PROXY_URL}${url}`;
 
-export const validateURL = (url, feeds) =>
-  yup
-    .string()
-    .url(i18next.t('url'))
-    .required(i18next.t('required'))
-    .notOneOf(feeds, i18next.t('notOneOf'))
-    .validate(url);
+export const validateURL = (url, feeds) => yup
+  .string()
+  .url(i18next.t('url'))
+  .required(i18next.t('required'))
+  .notOneOf(feeds, i18next.t('notOneOf'))
+  .validate(url);
 
 export const getFeedData = (state) => {
   const { url } = state.form.input;
@@ -24,9 +23,13 @@ export const getFeedData = (state) => {
     .then(({ data }) => parse(data))
     .then((parsedData) => {
       const id = uniqueId();
-      const { title, description, link, items } = parsedData;
+      const {
+        title, description, link, items,
+      } = parsedData;
 
-      const channel = { id, title, description, link, url };
+      const channel = {
+        id, title, description, link, url,
+      };
       state.data.feeds = [channel, ...state.data.feeds];
 
       const news = items.map((item) => ({ id, ...item }));
